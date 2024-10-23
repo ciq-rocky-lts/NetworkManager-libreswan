@@ -1,0 +1,26 @@
+From eaf501ab7cb732a152097d2af5636b03fd3f029d Mon Sep 17 00:00:00 2001
+From: Francesco Giudici <fgiudici@redhat.com>
+Date: Mon, 15 Apr 2019 14:51:26 +0200
+Subject: [PATCH] properties: set advanced dialog modal
+
+https://bugzilla.redhat.com/show_bug.cgi?id=1697329
+---
+ properties/nm-libreswan-dialog.ui | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/properties/nm-libreswan-dialog.ui b/properties/nm-libreswan-dialog.ui
+index 73522d4..e355c08 100644
+--- a/properties/nm-libreswan-dialog.ui
++++ b/properties/nm-libreswan-dialog.ui
+@@ -451,6 +451,8 @@
+     <property name="can_focus">False</property>
+     <property name="border_width">12</property>
+     <property name="title" translatable="yes">IPsec Advanced Options</property>
++    <property name="modal">True</property>
++    <property name="destroy_with_parent">True</property>
+     <property name="type_hint">dialog</property>
+     <child internal-child="vbox">
+       <object class="GtkBox" id="dialog-vbox1">
+-- 
+2.20.1
+
