@@ -1,0 +1,68 @@
+From 4be4c56b4f8a52b1cd5f8aadee273706c28ae332 Mon Sep 17 00:00:00 2001
+From: Beniamino Galvani <bgalvani@redhat.com>
+Date: Sat, 13 Jan 2024 18:10:02 +0100
+Subject: [PATCH 1/1] service: fix wrong refcounting in D-Bus handler for
+ Callback()
+
+The Callback() D-Bus method is handled via a GDBus-generated skeleton
+code in nm-libreswan-helper-service-dbus.c, function
+_nmdbus_libreswan_helper_skeleton_handle_method_call(). The function
+emits signal "handle-callback" to let the program handle the incoming
+method. As documented in the GDoc comments, the signal handler must
+return TRUE if it handles the call.
+
+```
+  /**
+   * NMDBusLibreswanHelper::handle-callback:
+   * @object: A #NMDBusLibreswanHelper.
+   * @invocation: A #GDBusMethodInvocation.
+   * @arg_environment: Argument passed by remote caller.
+
+   * Signal emitted when a remote caller is invoking the Callback()
+     D-Bus method.
+
+   * If a signal handler returns %TRUE, it means the signal handler
+     will handle the invocation (e.g. take a reference to @invocation
+     and eventually call nmdbus_libreswan_helper_complete_callback()
+     or e.g. g_dbus_method_invocation_return_error() on it) and no
+     other signal handlers will run. If no signal handler handles the
+     invocation, the %G_DBUS_ERROR_UNKNOWN_METHOD error is returned.
+
+   * Returns: %G_DBUS_METHOD_INVOCATION_HANDLED or %TRUE if the
+     invocation was handled, %G_DBUS_METHOD_INVOCATION_UNHANDLED or
+     %FALSE to let other signal handlers run.
+   */
+```
+
+At the moment, in case of error the handler first calls
+nmdbus_libreswan_helper_complete_callback() which decreases the
+refcount of "invocation", and then returns FALSE which tells the
+skeleton code to return an error, also unreferencing the
+invocation. This causes a crash.
+
+Since the G_DBUS_METHOD_INVOCATION_HANDLED alias for TRUE is only
+available since GLib 2.68 (while we target 2.36), just return TRUE.
+
+Fixes: acb9eb9de50b ('service: process the configuration in the service, not the helper')
+(cherry picked from commit 8ceb901719acac3778e1d76779d9c14289185157)
+---
+ src/nm-libreswan-service.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/nm-libreswan-service.c b/src/nm-libreswan-service.c
+index fc470a6..4850729 100644
+--- a/src/nm-libreswan-service.c
++++ b/src/nm-libreswan-service.c
+@@ -1379,7 +1379,8 @@ out:
+ 	}
+ 
+ 	nmdbus_libreswan_helper_complete_callback (object, invocation);
+-	return success;
++
++	return TRUE;
+ }
+ 
+ /****************************************************************/
+-- 
+2.43.0
+
